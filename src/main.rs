@@ -10,8 +10,8 @@ fn main() {
     let addr = ([0, 0, 0, 0], port).into();
 
     let server = Server::bind(&addr)
-        .serve(|| service_fn_ok(move |req: Request<Body>| {
-            println!("{}", req.uri().path());
+        .serve(|| service_fn_ok(move |_req: Request<Body>| {
+            // println!("{}", req.uri().path());
             Response::new(Body::from("OK"))
             }))
         .map_err(|e| eprintln!("server error: {}", e));
