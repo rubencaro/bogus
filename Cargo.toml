@@ -5,3 +5,4 @@ authors = ["Rubén Caro <ruben.caro.estevez@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+hyper = "0.12"
