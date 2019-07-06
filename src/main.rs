@@ -1,18 +1,27 @@
+#[macro_use]
+extern crate clap;
 extern crate hyper;
-
 use hyper::rt::{self, Future};
 use hyper::service::service_fn_ok;
 use hyper::{Body, Request, Response, Server, StatusCode};
-use std::env;
 
 fn main() {
-    let (port, status) = parse_args();
+    let matches = clap::App::new("Bogus")
+        .version("0.1.0")
+        .about("Bogus server that only responds, doing nothing else.")
+        .args_from_usage(
+            "-p, --port [number] 'Sets a custom port to listen to'
+             -c, --code [code] 'Sets a custom response code'",
+        )
+        .get_matches();
+
+    let port = parse_u16(&matches, "port", 3000);
     let addr = ([0, 0, 0, 0], port).into();
+    let status = parse_status(&matches, 200);
 
     let server = Server::bind(&addr)
         .serve(move || {
             service_fn_ok(move |_req: Request<Body>| {
-                // println!("{}", req.uri().path());
                 let mut response = Response::new(Body::from("OK"));
                 *response.status_mut() = status;
                 response
@@ -25,36 +34,19 @@ fn main() {
     rt::run(server);
 }
 
-fn parse_args() -> (u16, StatusCode) {
-    let mut args = env::args();
-    args.next(); // the command itself
-    (parse_port(&mut args), parse_status(&mut args))
+fn parse_u16(matches: &clap::ArgMatches<'_>, name: &str, default: u16) -> u16 {
+    value_t!(matches, name, u16).unwrap_or_else(|e| {
+        println!("{}\nUsing default one.", e);
+        default
+    })
 }
 
-fn parse_port(args: &mut env::Args) -> u16 {
-    match args.next() {
-        Some(arg) => parse_u16(arg, 3000),
-        None => 3000,
-    }
-}
-
-fn parse_code(args: &mut env::Args) -> u16 {
-    match args.next() {
-        Some(arg) => parse_u16(arg, 200),
-        None => 200,
-    }
-}
-
-fn parse_status(args: &mut env::Args) -> StatusCode {
-    match StatusCode::from_u16(parse_code(args)) {
+fn parse_status(matches: &clap::ArgMatches<'_>, default: u16) -> StatusCode {
+    match StatusCode::from_u16(parse_u16(&matches, "code", default)) {
         Ok(st) => st,
-        Err(_) => StatusCode::OK,
-    }
-}
-
-fn parse_u16(arg: String, default: u16) -> u16 {
-    match arg.parse::<u16>() {
-        Ok(p) => p,
-        Err(_) => default,
+        Err(e) => {
+            println!("Not a valid status code: {}\nUsing 200.", e);
+            StatusCode::OK
+        },
     }
 }
